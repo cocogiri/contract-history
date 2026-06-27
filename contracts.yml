@@ -15,6 +15,6 @@ contracts:
     repositories:
       workspace-types: "94220e0"
       workspace-core: "2bfe67b"
-      capability-bridge: "1882693"
+      capability-bridge: "dd5ad00"
       workspace-host: "18bc2bf"
       cocogiri-meta: "d707f94"
