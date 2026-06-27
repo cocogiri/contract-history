@@ -25,3 +25,13 @@ See `contracts.yml` for the current mapping. Each entry records:
    contract version.
 3. Append a new entry to `contracts.yml`.
 4. Open a PR against this repo.
+
+## Automation
+
+A GitHub Actions workflow in `cocogiri-meta` runs daily and on every
+`contract-released` repository dispatch event. It fetches the latest tags from
+each repository listed in a contract entry and opens a pull request in this
+repo when the mapping changes.
+
+Manual updates are still required when a repo has not yet been tagged for a new
+contract version.
