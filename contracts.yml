@@ -5,6 +5,21 @@
 # compatible dependency sets from this file.
 
 contracts:
+  - version: "0.3.0"
+    name: "COG ↔ SDL capability bridge contract — Gate 2 confirmation and event alignment"
+    date: "2026-06-28"
+    description: >
+      Adds Intent.confirmed for high/medium-risk confirmation replay, aligns
+      event payloads with specs/behavior/event-bus.md (InputSentEvent.text,
+      NoteSavedEvent, AlertDispatchedEvent, HostHeartbeatEvent.latencyMs,
+      HostDisconnectedEvent.reason/timestamp, RuleTriggeredEvent.behavior/timestamp),
+      makes NoteStore.save return the note ID, and introduces SQLiteAuditLog.
+    repositories:
+      workspace-types: "contract-0.3.0"
+      workspace-core: "contract-0.3.0"
+      workspace-host: "contract-0.3.0"
+      workspace-voice: "contract-0.3.0"
+      workspace-text: "contract-0.3.0"
   - version: "0.2.0"
     name: "COG ↔ SDL capability bridge contract"
     date: "2026-06-28"
