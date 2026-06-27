@@ -1,0 +1,20 @@
+# Canonical contract version → repository tag/commit mapping.
+#
+# The `repositories` block records the exact tag (preferred) or commit SHA for
+# each repo that participates in the contract. External consumers can resolve
+# compatible dependency sets from this file.
+
+contracts:
+  - version: "0.2.0"
+    name: "COG ↔ SDL capability bridge contract"
+    date: "2026-06-28"
+    description: >
+      Initial ratified bridge contract. Defines CogTaskFrame, CogContext,
+      SdlCapabilityPlan, CapabilityBridgeClient, and supporting types.
+      V0 scope is observe/advise only.
+    repositories:
+      workspace-types: "94220e0"
+      workspace-core: "2bfe67b"
+      capability-bridge: "1882693"
+      workspace-host: "18bc2bf"
+      cocogiri-meta: "d707f94"
