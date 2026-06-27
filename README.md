@@ -33,5 +33,23 @@ A GitHub Actions workflow in `cocogiri-meta` runs daily and on every
 each repository listed in a contract entry and opens a pull request in this
 repo when the mapping changes.
 
-Manual updates are still required when a repo has not yet been tagged for a new
-contract version.
+### Required setup
+
+Each contract-owning repository has a `.github/workflows/notify-contract-release.yml`
+workflow that dispatches a `contract-released` event to `cocogiri-meta`. Because
+cross-repository dispatch requires elevated permissions, each repository must
+set a repository secret named:
+
+```text
+CROSS_REPO_DISPATCH_TOKEN
+```
+
+This token needs `repo` scope (or `public_repo` for public repositories) and
+must be authorized to write to `cocogiri/cocogiri-meta`. If the secret is not
+set, the workflow falls back to the default `GITHUB_TOKEN`, which typically
+cannot dispatch across repositories.
+
+### Manual fallback
+
+If a repo has not yet been tagged for a new contract version, update the commit
+SHA in `contracts.yml` manually and open a PR.
