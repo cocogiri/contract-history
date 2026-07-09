@@ -49,8 +49,16 @@ EXEMPT_PATTERNS = [
 
 PROTECTED_BRANCHES = ["main", "master", "release/*"]
 
-ROUTING_ATTESTATION_SCHEMA_VERSION = "sdl-routing-attestation@1"
-CLIENT_MANIFEST_SCHEMA_VERSION = "stibdedlom-client-manifest@1"
+ROUTING_ATTESTATION_SCHEMA_VERSION = "sdl-routing-attestation@2"
+SUPPORTED_ROUTING_ATTESTATION_SCHEMA_VERSIONS = {
+    "sdl-routing-attestation@1",
+    "sdl-routing-attestation@2",
+}
+CLIENT_MANIFEST_SCHEMA_VERSION = "stibdedlom-client-manifest@2"
+SUPPORTED_CLIENT_MANIFEST_SCHEMA_VERSIONS = {
+    "stibdedlom-client-manifest@1",
+    "stibdedlom-client-manifest@2",
+}
 INVOCATION_POLICY_SCHEMA_VERSION = "0.1.0"
 
 
@@ -540,7 +548,7 @@ def validate_commit(
                 "reason_codes": ["sdl.hook.missing_routing_attestation"],
                 "changed_paths": non_exempt,
             }
-        if attestation.get("schema_version") != ROUTING_ATTESTATION_SCHEMA_VERSION:
+        if attestation.get("schema_version") not in SUPPORTED_ROUTING_ATTESTATION_SCHEMA_VERSIONS:
             return {
                 "ok": False,
                 "reason": f"attestation for issue #{issue} has invalid schema version",
@@ -1035,8 +1043,8 @@ def _build_routing_index(attestations: list[dict[str, Any]]) -> dict[str, Any]:
         "attestations": [
             {
                 "issue": data["issue"],
-                "envelope_hash": data["envelope_hash"],
-                "lifecycle_record_id": data["lifecycle_record_id"],
+                "envelope_hash": data.get("envelope_hash"),
+                "lifecycle_record_id": data.get("lifecycle_record_id"),
                 "created_at": data["created_at"],
             }
             for data in attestations
@@ -1073,19 +1081,9 @@ def validate_attestations(
 ) -> dict[str, Any]:
     """Validate all routing attestations in the repo and maintain routing/index.json."""
     repo_root = _real(repo_root)
+    if signature_key is None:
+        signature_key, _ = load_routing_attestation_key(repo_root)
     routing_dir = repo_root / ".stibdedlom" / "routing"
-    required_fields = [
-        "schema_version",
-        "issue",
-        "goal",
-        "envelope_hash",
-        "lifecycle_record_id",
-        "created_at",
-        "kid",
-        "algorithm",
-        "runtime_binding",
-        "max_commits_ahead",
-    ]
     errors: list[dict[str, Any]] = []
     count = 0
     attestations: list[dict[str, Any]] = []
@@ -1108,27 +1106,47 @@ def validate_attestations(
             errors.append({"path": path.name, "reason": f"invalid JSON: {exc}"})
             continue
 
-        missing = [field for field in required_fields if field not in data]
-        if missing:
-            errors.append({"path": path.name, "reason": f"missing fields: {missing}"})
-            continue
-
-        if data.get("schema_version") != ROUTING_ATTESTATION_SCHEMA_VERSION:
+        schema_version = data.get("schema_version", "")
+        if schema_version not in SUPPORTED_ROUTING_ATTESTATION_SCHEMA_VERSIONS:
             errors.append(
                 {
                     "path": path.name,
-                    "reason": f"unsupported schema version {data.get('schema_version')}",
+                    "reason": f"unsupported schema version {schema_version}",
                 }
             )
+            continue
+
+        if schema_version == "sdl-routing-attestation@2":
+            required_fields = [
+                "schema_version",
+                "issue",
+                "goal",
+                "envelope_hash",
+                "created_at",
+                "kid",
+                "algorithm",
+                "runtime_binding",
+            ]
+        else:
+            required_fields = [
+                "schema_version",
+                "issue",
+                "allowed_paths",
+                "created_at",
+            ]
+        missing = [field for field in required_fields if field not in data]
+        if missing:
+            errors.append({"path": path.name, "reason": f"missing fields: {missing}"})
             continue
 
         if not isinstance(data.get("issue"), int) or data["issue"] < 1:
             errors.append({"path": path.name, "reason": "issue must be a positive integer"})
             continue
 
-        if not re.fullmatch(r"sha256:[a-f0-9]{64}", str(data.get("envelope_hash", ""))):
-            errors.append({"path": path.name, "reason": "envelope_hash must match sha256:<64 hex chars>"})
-            continue
+        if schema_version == "sdl-routing-attestation@2":
+            if not re.fullmatch(r"sha256:[a-f0-9]{64}", str(data.get("envelope_hash", ""))):
+                errors.append({"path": path.name, "reason": "envelope_hash must match sha256:<64 hex chars>"})
+                continue
 
         if not data.get("capability") and not data.get("role"):
             errors.append({"path": path.name, "reason": "attestation must specify capability or role"})
@@ -1200,7 +1218,7 @@ def validate_schemas(repo_root: Path) -> dict[str, Any]:
         missing = [field for field in required if field not in manifest]
         if missing:
             errors.append({"path": ".stibdedlom/manifest.yaml", "reason": f"missing fields: {missing}"})
-        if manifest.get("schema_version") != CLIENT_MANIFEST_SCHEMA_VERSION:
+        if manifest.get("schema_version") not in SUPPORTED_CLIENT_MANIFEST_SCHEMA_VERSIONS:
             errors.append(
                 {
                     "path": ".stibdedlom/manifest.yaml",
