@@ -7,10 +7,22 @@ set -euo pipefail
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
+ZERO_SHA="0000000000000000000000000000000000000000"
+
 while read -r local_ref local_sha remote_ref remote_sha; do
+    base="$remote_sha"
+    if [ "$remote_sha" = "$ZERO_SHA" ]; then
+        # New ref: validate only the commits unique to this branch (vs origin/main),
+        # not the entire repository history. Mirrors CI's `--base origin/main`.
+        base=$(git -C "$REPO_ROOT" merge-base "$local_sha" origin/main 2>/dev/null || true)
+        if [ -z "$base" ]; then
+            base=$(git -C "$REPO_ROOT" rev-parse --verify origin/main 2>/dev/null || true)
+        fi
+        base="${base:-$ZERO_SHA}"
+    fi
     python3 "$REPO_ROOT/.stibdedlom/bin/validate-push.py" \
         --repo-root "$REPO_ROOT" \
-        --base "$remote_sha" \
+        --base "$base" \
         --head "$local_sha" \
         --remote-ref "$remote_ref" \
         --require-lifecycle-records
