@@ -25,7 +25,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: python3 -m pip install --user "pyyaml>=6.0"
+        # cryptography is required to verify ed25519 routing-attestation signatures;
+        # without it the validator silently skips ed25519 and every attestation fails.
+        run: python3 -m pip install --user "pyyaml>=6.0" "cryptography>=42.0.0"
 
       - name: Validate SDL manifest and policy schemas
         run: |
@@ -45,6 +47,10 @@ jobs:
             --repo-root "$PWD"
 
       - name: Re-run pre-commit checks on HEAD
+        # Server-side mirror of the local pre-commit hook for branches/PRs. Skipped on
+        # main: validate-commit treats main as a protected branch and rejects it.
+        # Main's governance is covered by the schema / attestation / trust-anchor steps.
+        if: github.ref_name != 'main'
         run: |
           COMMIT_MSG=$(git log -1 --format=%B)
           python3 .stibdedlom/bin/validate-commit.py \
@@ -52,6 +58,10 @@ jobs:
             --commit-msg-text "$COMMIT_MSG"
 
       - name: Re-run pre-push checks
+        # Server-side mirror of the local pre-push hook for branches/PRs. Skipped on
+        # main: remote-ref resolves to refs/heads/main, which validate-push rejects as
+        # a protected branch. Main's governance is covered by the steps above.
+        if: github.ref_name != 'main'
         run: |
           python3 .stibdedlom/bin/validate-push.py \
             --repo-root "$PWD" \
